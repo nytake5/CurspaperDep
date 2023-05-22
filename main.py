@@ -2,9 +2,9 @@ from flask import Flask, request, redirect, json
 from PIL import Image
 import io
 import torch
-from yolov7.models.yolo import Model
-from yolov7.myutils.torch_utils import select_device
-from yolov7.hubconf import custom
+from models.yolo import Model
+from utils.torch_utils import select_device
+from hubconf import custom
 import cv2
 import numpy as np
 import pytesseract

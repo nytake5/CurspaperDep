@@ -74,8 +74,8 @@ def resavedImageToTargetsImages(detect_path, k_global):
 def get_prediction(img_bytes):
     filename = img_bytes.filename
     img = Image.open(img_bytes)
-    basepath = "C:\Curspaper" 
-    #basepath = os.path.dirname(__file__)
+    #basepath = "C:\Curspaper" 
+    basepath = os.path.dirname(__file__)
     filepath = os.path.join(basepath, 'uploads', filename)
     print("upload folder is ", filepath)
     img.save(filepath)
@@ -108,11 +108,13 @@ def get_strongest(files_result):
         for x in exists_result_strong:
             if isinstance(x, (list, tuple)): 
                 if (x[-1][-1] == max_strong):
-                    return x
+                    return x[-1]
     return None 
 
 @app.route('/predict', methods=['GET', 'POST'])
 def predict():
+    if os.path.exists(os.path.join(os.path.dirname(__file__), 'runs/detect/temp0')):
+        shutil.rmtree(os.path.join(os.path.dirname(__file__), 'runs/detect/temp0'))
     if request.method == 'POST':
         f = request.files['file']
         results = get_prediction(f)
@@ -120,13 +122,13 @@ def predict():
         try:
             result = get_strongest(results)
             if isinstance(result, (list, tuple)):
-                points, number, strong = result[0]
+                points, number, strong = result
             else:
                 number = result
-            response = app.response_class(
-                response = json.dumps(number),
-                status=200,
-                mimetype='application/json'
+                response = app.response_class(
+                    response = json.dumps(number),
+                    status = 200,
+                    mimetype='application/json'
             )
             return response
         except:

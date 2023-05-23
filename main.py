@@ -1,23 +1,16 @@
 from flask import Flask, request, redirect, json
 from PIL import Image
-import io
-import torch
-from models.yolo import Model
-from utils.torch_utils import select_device
-from hubconf import custom
 import cv2
 import numpy as np
 import pytesseract
-import matplotlib.pyplot as plt
 import easyocr
-import subprocess
 from subprocess import Popen
 import os
 import glob
 import shutil
-import collections.abc
 
 app = Flask(__name__)
+k_global = 0
 
 reader = easyocr.Reader(['en']) 
 
@@ -33,10 +26,10 @@ def plot_bounding_box(image_file, image, annotation_list, i, save_file_directory
     transformed_annotations[:,[0,2]] = annotations[:,[0,2]] * w 
     transformed_annotations[:,[1,3]] = annotations[:,[1,3]] * h  
     
-    transformed_annotations[:,0] = transformed_annotations[:,0] - (transformed_annotations[:,2] / 2) - 3
-    transformed_annotations[:,1] = transformed_annotations[:,1] - (transformed_annotations[:,3] / 2) - 3
-    transformed_annotations[:,2] = transformed_annotations[:,0] + transformed_annotations[:,2] + 3
-    transformed_annotations[:,3] = transformed_annotations[:,1] + transformed_annotations[:,3] + 3
+    transformed_annotations[:,0] = transformed_annotations[:,0] - (transformed_annotations[:,2] / 2) - 40
+    transformed_annotations[:,1] = transformed_annotations[:,1] - (transformed_annotations[:,3] / 2) - 40
+    transformed_annotations[:,2] = transformed_annotations[:,0] + transformed_annotations[:,2] + 80
+    transformed_annotations[:,3] = transformed_annotations[:,1] + transformed_annotations[:,3] + 80
     
     for ann in transformed_annotations: 
         x0, y0, x1, y1 = ann 
@@ -78,16 +71,15 @@ def resavedImageToTargetsImages(detect_path, k_global):
         print("An exception occurred")
     return k_temp
 
-k_global = 0
 def get_prediction(img_bytes):
     filename = img_bytes.filename
     img = Image.open(img_bytes)
-    #basepath = "C:\Curspaper" 
-    basepath = os.path.dirname(__file__)
+    basepath = "C:\Curspaper" 
+    #basepath = os.path.dirname(__file__)
     filepath = os.path.join(basepath, 'uploads', filename)
     print("upload folder is ", filepath)
     img.save(filepath)
-    process = Popen(["python", "detect.py", '--save-txt', '--source', filepath, "--weights", "yolov7.pt"], shell=True)
+    process = Popen(["python", "detect.py", '--save-txt', '--source', filepath, "--weights", "myyolov7.pt"], shell=True)
     process.wait()
     
     folder_path = 'runs/detect'
@@ -100,16 +92,8 @@ def get_prediction(img_bytes):
         local_result = list()
         for file in files_to_detect:
             img = cv2.imread(file)
-            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-            msk = cv2.inRange(hsv, np.array([0, 0, 175]), np.array([179, 255, 255]))
-            krn = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 3))
-            dlt = cv2.dilate(msk, krn, iterations=1)
-            thr = 255 - cv2.bitwise_and(dlt, msk)
-            plt.imshow(thr)
-            text = pytesseract.image_to_string(thr, lang='eng', config="--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789")
-            mass_text = reader.readtext(thr, allowlist='0123456789')
-            local_result.append(text)
-            local_result.append(mass_text)
+            mass_text = reader.readtext(img, allowlist='0123456789')
+            local_result.append(mass_text)  
         result.append(local_result)
     return result
 
@@ -125,6 +109,7 @@ def get_strongest(files_result):
             if isinstance(x, (list, tuple)): 
                 if (x[-1][-1] == max_strong):
                     return x
+    return None 
 
 @app.route('/predict', methods=['GET', 'POST'])
 def predict():
@@ -152,4 +137,4 @@ def predict():
             )
             return response
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=6666)
+    app.run(debug=True)
